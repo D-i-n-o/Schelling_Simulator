@@ -1,4 +1,4 @@
-﻿
+﻿from abc import ABC, abstractmethod
 import ast, math
 
 locals =  {key: value for (key,value) in vars(math).items() if key[0] != '_'}
@@ -49,6 +49,34 @@ class TauUtility():
     def __call__(self, f_i):
         return min(f_i, self.tau)
     
+class PlateauUtility(ABC):
+    def __init__(self, l, r):
+        assert l <= r and 0 <= l and r <= 1
+        self.l = l
+        self.r = r
+
+    @abstractmethod
+    def __call__(self, f_i):
+        pass
+
+class TrapezoidalUtility(PlateauUtility):
+    def __call__(self, f_i):
+        if f_i < self.l:
+            return f_i - self.l  / self.l
+        elif f_i > self.r:
+            return (1 - f_i) / (1 - self.r)
+        return 1.0
+
+class RectangularUtility(PlateauUtility):
+    def __call__(self, f_i):
+        if f_i < self.l or f_i > self.r:
+            return 0.0
+        return 1.0
+
+class CentralRectangularUtility(RectangularUtility):
+    def __init__(self, size):
+        super().__init__(0.5-size/2, 0.5+size/2)
+    
 class TauNoSegUtility():
     def __init__(self, tau):
         self.tau = tau
@@ -57,5 +85,3 @@ class TauNoSegUtility():
         if f_i == 1.0:
             return 0.0
         return min(f_i, self.tau)
-    
-
