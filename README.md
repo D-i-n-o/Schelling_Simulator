@@ -12,4 +12,5 @@ To start the simulator, run `python main.py`.
 - pygame-gui
 
 # Credits
-Graphics from "The Parable of the Polygons" by Vi Hart and Nicky Case (public domain) https://github.com/ncase/polygons
+- Graphics from "The Parable of the Polygons" by Vi Hart and Nicky Case (public domain) https://github.com/ncase/polygons
+- Lars Seifert, who wrote the simulator for his master thesis on [Single-peaked Schelling Games](https://hpi.de/friedrich/publications/2023/Document/puma-friedrich/2302.12107.pdf/1d7f23e9b0503577203b37e9eca62e2e.html?tx_extbibsonomycsl_publicationlist%5Baction%5D=download&cHash=cb031c483e0161814a3de4c1b3302b3a)
