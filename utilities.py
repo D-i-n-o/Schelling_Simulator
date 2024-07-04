@@ -62,7 +62,7 @@ class PlateauUtility(ABC):
 class TrapezoidalUtility(PlateauUtility):
     def __call__(self, f_i):
         if f_i < self.l:
-            return f_i - self.l  / self.l
+            return f_i  / self.l
         elif f_i > self.r:
             return (1 - f_i) / (1 - self.r)
         return 1.0

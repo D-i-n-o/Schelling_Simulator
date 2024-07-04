@@ -130,8 +130,16 @@ class UIDisplayValue:
     
     def ui_elements(self):
         return [self.label, self.value_label]
+    
+
 
 class SettingsWindow(UIWindow):
+
+    def disable_properties(self, names):
+        for name in names:
+            self.properties[name].ui_elements()[0].disable()
+
+
     def add_ui_property(self, prop):
         self.properties[prop.name] = prop
         
@@ -177,7 +185,7 @@ class SettingsWindow(UIWindow):
         self.settings = {}
         self.enable_close_button = False
         self.rebuild()
-        self.default_rect = pygame.Rect((0,0), (100, self.row_y))
+        self.default_rect = pygame.Rect((0,0), (125, self.row_y))
         self.callback_manager = UICallbackManager()
         
         
@@ -187,33 +195,46 @@ class SettingsWindow(UIWindow):
         self.add_ui_property(UISliderProperty(self, "Height", start_value = 20, value_range=(1, 100), click_increment = 1))
         self.add_ui_property(UIDropDownProperty(self, "Torus Type", starting_option = "8-Torus", options_list = ["8-Torus", "4-Torus"]))
         self.add_ui_property(UIDropDownProperty(self, "Neighborhood", starting_option = "Self-Inclusive", options_list = ["Self-Inclusive", "Self-Exclusive"]))
-        
-        self.add_ui_property(UISliderProperty(self, "All Agents", start_value = 0.8, value_range=(0.0, 0.999), click_increment = 0.005))
+        # self.add_ui_property(UIDropDownProperty(self, "Jump or Swap", starting_option = "Jump", options_list = ["Jump", "Swap"]))
+
+        self.add_ui_property(UISliderProperty(self, "All Agents", start_value = 0.8, value_range=(0.0, 1.0), click_increment = 0.005))
         self.add_ui_property(UISliderProperty(self, "Blue Agents", start_value = 0.5, value_range=(0.0, 1.0), click_increment = 0.01))
 
-        self.add_ui_property(UIDropDownProperty(self, "Game Type", starting_option = "Single-Peaked", options_list =  ["Single-Peaked", ">=Tau",">=Tau and <1", "Custom"]))
+        game_types = ["Single-Peaked", ">=Tau",">=Tau and <1", "Trapezoid", "Rectangle", "Custom"]
+        self.add_ui_property(UIDropDownProperty(self, "Game Type", starting_option = "Single-Peaked", options_list = game_types))
         self.add_ui_property(UISliderProperty(self, "Peak", start_value = 0.0, value_range=(0.01, 0.99), click_increment = 0.01))
         self.add_ui_property(UISliderProperty(self, "Tau", start_value = 0.0, value_range=(0.0, 1.0), click_increment = 0.01))
+        self.add_ui_property(UISliderProperty(self, "l", start_value = 0.25, value_range=(0.0, 1.0), click_increment = 0.01))
+        self.add_ui_property(UISliderProperty(self, "r", start_value = 0.75, value_range=(0.0, 1.0), click_increment = 0.01))
         self.add_ui_property(UITextProperty(self, "Custom U_i(frac) = ", text = "min(frac, 0.5)"))
         
         self.add_ui_property(UIDisplayValue(self, "Nash Equilibrium", lambda : "True" if self.game.NE else "False"))
         self.add_ui_property(UIDisplayValue(self, "Yellow", lambda : str(self.game.r)))
         self.add_ui_property(UIDisplayValue(self, "Blue", lambda : str(self.game.b)))
         self.add_ui_property(UIDisplayValue(self, "Empty", lambda : str(self.game.width*self.game.height - self.game.b - self.game.r)))
+
+        # properties = ['All Agents']
         
         
         self.game_type = "Single-Peaked"
         self.rebuild_ui()
+    
     def update(self, time_delta):
         super().update(time_delta)
         self.rebuild_ui()
         for name, prop in self.properties.items():
             prop.update()
-    
+
+        # jump_or_swap = self.properties["Jump or Swap"].get_value()
+        # if jump_or_swap == "Jump" and isinstance(self.game, SwapGame):
+        #     self.game = JumpGame(self.game.width, self.game.height, self.game.utility_function)
+        # elif jump_or_swap == "Swap" and isinstance(self.game, JumpGame):
+        #     self.game = SwapGame(self.game.width, self.game.height, self.game.utility_function)
+        
+        self.game.set_agents(self.properties["All Agents"].get_value())
         self.game.set_grid_size(self.properties["Width"].get_value(), self.properties["Height"].get_value())
         self.game.set_torus_type(self.properties["Torus Type"].get_value())
         self.game.set_self_inclusive(self.properties["Neighborhood"].get_value() == "Self-Inclusive")
-        self.game.set_agents(self.properties["All Agents"].get_value())
         self.game.set_blue_agents(self.properties["Blue Agents"].get_value())
         
         if self.game_type != self.properties["Game Type"].get_value():
@@ -226,6 +247,10 @@ class SettingsWindow(UIWindow):
                 self.game.set_utility_function(SinglePeakedUtility(Fraction(self.properties["Peak"].get_value())))
             if self.game_type == "Custom":
                 self.game.set_utility_function(CustomUtility(self.properties["Custom U_i(frac) = "].get_value()))
+            if self.game_type == "Trapezoid":
+                self.game.set_utility_function(TrapezoidalUtility(self.properties["l"].get_value(), self.properties["r"].get_value()))
+            if self.game_type == "Rectangle":
+                self.game.set_utility_function(RectangularUtility(self.properties["l"].get_value(), self.properties["r"].get_value()))
         
         if self.game_type == ">=Tau":
             if self.game.utility_function.tau != Fraction(self.properties["Tau"].get_value()):
@@ -243,4 +268,9 @@ class SettingsWindow(UIWindow):
             if self.game.utility_function.code != self.properties["Custom U_i(frac) = "].get_value():
                 self.game.NE = False    
             self.game.utility_function.code = self.properties["Custom U_i(frac) = "].get_value()
+        if self.game_type == "Trapezoid" or self.game_type == "Rectangle":
+            if self.game.utility_function.l != self.properties["l"].get_value() or self.game.utility_function.r != self.properties["r"].get_value():
+                self.game.NE = False    
+            self.game.utility_function.l = self.properties["l"].get_value()
+            self.game.utility_function.r = self.properties["r"].get_value()
         
