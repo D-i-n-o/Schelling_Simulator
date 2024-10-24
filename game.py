@@ -25,10 +25,17 @@ class Game(ABC):
         self.simulation_state = 0
         self.agent_mapping = {0:self.grid_cell("triangle.png"), 1:self.grid_cell("square.png")}
         self.grid = [[None for _ in range(self.height)] for _ in range(self.width)]
-
+        self.agents = []
         
-        # self.generate_grid()
-        
+    # LS(G) = 1 / |V| * sum_{v in V}  (f_G(v) / deg(v))
+    def local_segregation(self, agents):
+        if len(agents) == 0: return 0
+        sum_same_type = 0
+        deg = 8
+        for agent in agents:
+            same_type_agents, other_type_agents = agent.neighborhood_types()
+            sum_same_type += same_type_agents
+        return sum_same_type / (deg * len(self.agents))
 
     def grid_cell(self, texture = None):
         square = pygame.Surface((self.size, self.size))
@@ -125,9 +132,9 @@ class Game(ABC):
     @abstractmethod
     def generate_grid(self):
         pass
-
-class JumpGame(Game):
     
+        
+class JumpGame(Game):
     def place_agents(self, r, b):
         assert r+b < self.width*self.height
         # assert r >= b
@@ -151,6 +158,8 @@ class JumpGame(Game):
         self.jump_target = None
         self.jumping_agent = None
         self.simulation_state = 0
+        self.ls = self.local_segregation(self.agents)
+        print("Local Segregation: ", self.ls)
 
     def __init__(self, width, height, utility_function = SinglePeakedUtility(peak = Fraction(1,2))):
         super().__init__(width, height, utility_function)
@@ -203,9 +212,24 @@ class JumpGame(Game):
         if self.simulation_state == 1:
             self.execute_jump()
         self.simulation_state = (self.simulation_state + 1 ) % 2
+    
     def execute_jump(self):
         if self.jumping_agent and self.jump_target:
+            # updating local segregation metric
+            affected_neighbors = set()
+            affected_neighbors.add(self.jumping_agent)
+            for pos in self.neighbors(self.jumping_agent.pos):
+                if (neighbor := self.agent_at(pos)) is None: continue
+                affected_neighbors.add(neighbor)
+            for pos in self.neighbors(self.jump_target):
+                if (neighbor := self.agent_at(pos)) is None: continue
+                affected_neighbors.add(neighbor)
+
+            ls_pre_jump = self.local_segregation(affected_neighbors)
             self.jumping_agent.jump_to(self.jump_target)
+            ls_post_jump = self.local_segregation(affected_neighbors)
+            self.ls += (ls_post_jump - ls_pre_jump)
+    
         self.jumping_agent = None
         self.jump_target = None
             
@@ -293,8 +317,10 @@ class SwapGame(Game):
         self.place_agents(self.width*self.height - num_blue, num_blue)
         self.blue_agents = [self.agent_at(pos) for pos in self.positions() if self.agent_type_at(pos) == 1]
         self.red_agents = [self.agent_at(pos) for pos in self.positions() if self.agent_type_at(pos) == 0]
-        # self.agents = self.red_agents + self.blue_agents
+        self.agents = self.red_agents + self.blue_agents
         self.simulation_state = 0
+        self.ls = self.local_segregation(self.agents)
+        print("Local Segregation: ", self.ls)
 
     def agent_count(self):
         return int(self.height*self.width)
@@ -323,7 +349,16 @@ class SwapGame(Game):
 
         if self.simulation_state == 1:
             if self.swap_agent1 and self.swap_agent2:
+                affected_neighbors = set()
+                for pos in self.neighbors(self.swap_agent1.pos):
+                    affected_neighbors.add(self.agent_at(pos))
+                for pos in self.neighbors(self.swap_agent2.pos):
+                    affected_neighbors.add(self.agent_at(pos))
+                ls_pre_swap = self.local_segregation(affected_neighbors)
                 SwapAgent.swap(self, self.swap_agent1, self.swap_agent2)
+                ls_post_swap = self.local_segregation(affected_neighbors)
+                self.ls += (ls_post_swap - ls_pre_swap)
+        
         self.simulation_state = (self.simulation_state + 1 ) % 2
     
         

@@ -28,6 +28,40 @@ class UICallbackManager:
 def clip(value, lower, upper):
     return lower if value < lower else upper if value > upper else value
 
+# LS(G) = 1 / |V| * sum_{v in V}  (f_G(v) / deg(v))
+class MetricsWindow(UIWindow):
+    def __init__(self, rect, ui_manager, game, title = "LS(G) =", id = '#metrics'):
+        super().__init__(rect, ui_manager,
+                            window_display_title=title,
+                            object_id=id,
+                            resizable=True)
+        self.game = game
+        self.points = [None] * 1001
+        self.points[0] = 0
+        self.current_point = 1
+
+    def update(self, time_delta):
+        self.points[self.current_point] = self.game.ls
+        self.current_point = (self.current_point + 1) % len(self.points)
+        self.render(time_delta)
+
+    def render(self, time_delta):
+        self.image.fill((50,50,50))
+        super().update(time_delta)
+
+        step_size = 0.001
+        scaled_points = []
+        for i, f_i in enumerate(np.arange(0.0, 1.0+step_size, step_size)):
+            val = self.points[i]
+            if val is not None:
+                h = self.rect.height - 75
+                scaled_pt = (i*step_size*self.rect.width*0.8 + self.rect.width*0.1, h-(val*h*0.8) - h*0.1+35)
+                scaled_points.append(scaled_pt)
+
+        pygame.draw.lines(self.image, (200,200,200), False, scaled_points, width=2)
+
+    def on_close_window_button_pressed(self):
+        self.hide()
 
 class GraphWindow(UIWindow):
     def __init__(self, rect, ui_manager, game, title = "Utility Function", id = '#utility_graph'):
@@ -48,7 +82,6 @@ class GraphWindow(UIWindow):
         pygame.draw.lines(self.image, (200,200,200), False, points, width=2)
     def on_close_window_button_pressed(self):
         self.hide()
-
 
 class UISliderProperty:
     def __init__(self, window, name, start_value, value_range, click_increment = 1,**kwargs):
@@ -130,8 +163,6 @@ class UIDisplayValue:
     
     def ui_elements(self):
         return [self.label, self.value_label]
-    
-
 
 class SettingsWindow(UIWindow):
 
@@ -209,6 +240,7 @@ class SettingsWindow(UIWindow):
         self.add_ui_property(UITextProperty(self, "Custom U_i(frac) = ", text = "min(frac, 0.5)"))
         
         self.add_ui_property(UIDisplayValue(self, "Nash Equilibrium", lambda : "True" if self.game.NE else "False"))
+        self.add_ui_property(UIDisplayValue(self, "LS(G)", lambda : str(self.game.ls)))
         self.add_ui_property(UIDisplayValue(self, "Yellow", lambda : str(self.game.r)))
         self.add_ui_property(UIDisplayValue(self, "Blue", lambda : str(self.game.b)))
         self.add_ui_property(UIDisplayValue(self, "Empty", lambda : str(self.game.width*self.game.height - self.game.b - self.game.r)))
@@ -273,4 +305,3 @@ class SettingsWindow(UIWindow):
                 self.game.NE = False    
             self.game.utility_function.l = self.properties["l"].get_value()
             self.game.utility_function.r = self.properties["r"].get_value()
-        

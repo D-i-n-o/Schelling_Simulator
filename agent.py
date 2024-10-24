@@ -1,14 +1,16 @@
 ﻿import random
 from fractions import Fraction
 
+def is_greater(a, b, epsilon=1e-9):
+    return (a - b) > epsilon
 
 class Agent:
     def __init__(self, game, agent_type, pos):
         self.game = game
         self.type = agent_type
         self.pos = pos
-
-    def utility(self):
+        
+    def neighborhood_types(self):
         same_type_agents = 0
         other_type_agents = 0
         for neighbor_pos in self.game.neighbors(self.pos):
@@ -19,6 +21,10 @@ class Agent:
                 same_type_agents += 1
             else:
                 other_type_agents += 1
+        return same_type_agents, other_type_agents
+
+    def utility(self):
+        same_type_agents, other_type_agents = self.neighborhood_types()
         f_i = 0.0
         if same_type_agents + other_type_agents > 0:
             f_i = Fraction(same_type_agents, same_type_agents + other_type_agents)
@@ -44,7 +50,7 @@ class JumpAgent(Agent):
         for pos in empty_nodes:
             self.jump_to(pos, only_temporary=True)
             new_utility = self.utility()
-            if new_utility > u:
+            if is_greater(new_utility, u): 
                 improving_position = pos
                 break
         self.jump_to(original_position, only_temporary=True)
@@ -72,7 +78,7 @@ class SwapAgent(Agent):
             new_utility = self.utility()
             new_other_utility = other_agent.utility()
             SwapAgent.swap(self.game, self, other_agent)
-            if new_utility > u and new_other_utility > other_utility:
+            if is_greater(new_utility, u) and is_greater(new_other_utility, other_utility):
                 improving_agent = other_agent
                 break
         return improving_agent

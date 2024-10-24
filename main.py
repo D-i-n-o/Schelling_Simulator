@@ -100,7 +100,7 @@ def main():
         
     ui_window_width, ui_window_height = 640, 640
     ui_window_x = (w_width - ui_window_width)
-    ui_window_y = (w_height - ui_window_height + 100)
+    ui_window_y = (w_height - ui_window_height + 75)
     ui_window_rect = pygame.Rect((ui_window_x, ui_window_y), (ui_window_width, ui_window_height))
 
     graph_window_width, graph_window_height = 300, 150
@@ -111,8 +111,14 @@ def main():
 
     ui_window = SettingsWindow(ui_window_rect, manager, game)
     utility_window = GraphWindow(graph_window_rect, manager, game)
-    
-    
+
+    metrics_window_width, metrics_window_height = 300, 150
+    metrics_window_margin_top, metrics_window_margin_right = graph_window_margin_top, (10 + graph_window_width)
+    metrics_window_x = w_width - metrics_window_width - metrics_window_margin_right
+    metrics_window_y = metrics_window_margin_top
+    metrics_window_rect = pygame.Rect((metrics_window_x, metrics_window_y), (metrics_window_width, metrics_window_height))
+
+    metrics_window = MetricsWindow(metrics_window_rect, manager, game)
     running = True
     paused = False
     simulation_speed = 1 # simulation ticks per second.
